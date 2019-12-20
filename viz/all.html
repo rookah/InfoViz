@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <style type="text/css" media="screen, print">
+            body { margin: 30px 50px; font-family: sans-serif; }
+        </style>
+        <title></title>
+    </head>
+    <body>
+        <script src="../vendor/d3/d3.js"></script>
+        <script>
+const margin = {top: 100, right: 100, bottom: 150, left: 100};
+const width = 800 - margin.left - margin.right;
+const height = 500 - margin.top - margin.bottom;
+ 
+const svg = d3.select("body").append("svg")
+    .attr("width", String(width + margin.left + margin.right))
+    .attr("height", String(height + margin.top + margin.bottom))
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+ 
+// getColour converts a row in the dataset to a colour
+const getColour = (() => {
+    const gradient = d3.scaleLinear().domain([1, 100])
+        //.range(["yellow", "blue"]);
+        .range(["#FFFFFF", "#000000"]);
+        //.range(["#aeb01e", "#1e25b0"]);
+   
+    return (share, width) => gradient((share / width) / 0.015);
+})();
+ 
+// type = "year" or "country"
+const type = "year";
+ 
+if (type === "country") {
+    // Loads list of countries
+    d3.tsv("../data/countries.tsv", (error, data) => {
+        if(error) throw error;
+           
+        const countries = data;
+       
+        let totalData = [];
+       
+        const noCountries = 39;
+        let counter = 0;
+        for (let i = 0; i < countries.length; ++i) {
+       
+            // Loads income data
+            d3.tsv(`../data/income/${countries[i].code}.tsv`, (error, data2) => {
+                if(error) return;
+               
+                // Combines and filters data to the most recent year
+                const latestData = data2.filter(d => d.year === data2[0].year);
+                latestData.forEach((d) => {d.country = i;});
+                totalData = totalData.concat(latestData);
+               
+                ++counter;
+               
+                // Checks if all the data has finished loading
+                if (counter === noCountries) {
+                    totalData.sort((a,b) => (countries[a.country].name > countries[b.country].name) ? 1 : 0);
+               
+                    // Creates axes
+                    const x = d3.scaleBand()
+                        .range([0, width])
+                        .padding(0.1)
+                        .domain(totalData.map(d => d.country));
+                    const y = d3.scaleLinear()
+                        .range([height, 0]);
+                    const xAxis = d3.axisBottom(x)
+                        .tickFormat((d) => countries[d].name);
+                       
+                    svg.append("g")
+                        .attr("transform", `translate(0, ${height})`)
+                        .call(xAxis)
+                        .selectAll("text") 
+                            .attr("font-family", "sans-serif")
+                            .attr("font-size", "8px")
+                            .style("text-anchor", "end")
+                            .attr("dx", "-.8em")
+                            .attr("dy", ".15em")
+                            .attr("transform", d => "rotate(-65)");
+         
+                    svg.append("g")
+                        .attr("class", "y axis")
+                        .call(d3.axisLeft(y));
+                   
+                    // Creates bars
+                    svg.selectAll(".bar")
+                        .data(totalData)
+                        .enter()
+                        .append("rect")
+                            .attr("class", "bar")
+                            .attr("x", (d) => String(x(d.country)))
+                            .attr("y", (d) => String((1 - d.high) * height))
+                            .attr("width", x.bandwidth())
+                            .attr("height", (d) => String(d.width * height + 1))
+                            .attr("fill", (d) => getColour(d.share, d.width));
+                }
+            });
+        }
+    });
+}
+ 
+if (type === "year") {
+    d3.tsv(`../data/income/FR.tsv`, (error, data) => {
+        if(error) return;
+       
+        data.sort((a,b) => (a.year > b.year) ? 1 : 0);
+       
+        // Creates axes
+        const x = d3.scaleBand()
+            .range([0, width])
+            .padding(0.1)
+            .domain(data.map(d => d.year));
+        const y = d3.scaleLinear()
+            .range([height, 0]);
+        const xAxis = d3.axisBottom(x);
+       
+        svg.append("g")
+            .attr("transform", `translate(0, ${height})`)
+            .call(xAxis)
+            .selectAll("text") 
+                .attr("font-family", "sans-serif")
+                .attr("font-size", "8px")
+                .style("text-anchor", "end")
+                .attr("dx", "-.8em")
+                .attr("dy", ".15em")
+                .attr("transform", (d) => "rotate(-65)");
+ 
+        svg.append("g")
+            .attr("class", "y axis")
+            .call(d3.axisLeft(y));
+           
+        // Creates bars
+        svg.selectAll(".bar")
+            .data(data)
+            .enter()
+            .append("rect")
+                .attr("class", "bar")
+                .attr("x", (d) => String(x(d.year)))
+                .attr("y", (d) => String((1 - d.high) * height))
+                .attr("width", x.bandwidth())
+                .attr("height", (d) => String(d.width * height + 1))
+                .attr("fill", d => getColour(d.share, d.width));
+    });
+}
+        </script>
+    </body>
+</html>

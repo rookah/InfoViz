@@ -1,0 +1,20 @@
+////// For country/year viz //////
+Formulation of questions a-priori answered by the viz:
+	- (country) How does a country compare to others?
+	- (year) How has inequality evolved worldwide over the years?
+General remarks:
+	- Kinda hard to see what exactly the gradient/color represent
+	- Some entries (Korea, Slovenia...) seem bugged: gradient "reversed"?
+	- What is the data based on: last year, average of all years?
+Possible interractions:
+	- On rectangle/country mousehover, highlight target country and draw a temporary plot of all the years for selected country
+	- Allow swapping between year/country on the fly, OR make it 2 sepparate viz? (Both are interesting but answer separate questions)
+	- (MAYBE) allow grouping by region: change color & position in consequence? Would require to change the structure of the dataset (add a row with the region in the list of countries)
+Suggestions:
+	- Maybe add axis names for clarity? 
+	- If we get access to GINI index, how about an ordering of the countries based on it? Maybe then 1color = 1region might look great idk
+
+////// Graph to compare gini index evolution over time for several countries  //////
+	- y : Gini index
+	- x : Evolution over time
+	- Between selected countries (maximum of ~5-6?) OR by region
