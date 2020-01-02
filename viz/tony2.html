@@ -25,14 +25,20 @@ const svg = d3.select("body").append("svg")
 
 // getColour converts a row in the dataset to a colour
 const getColour = (() => {
-	const noColours = 10;
-	const gradient = d3.scaleLinear().domain([0, noColours])
-		//.range(["yellow", "blue"]);
-		.range(["#FFFFFF", "#000000"]);
-		//.range(["#aeb01e", "#1e25b0"]);
+	const noColours = 3;
+	const palette = ["#e5efa0", "#96ce99", "#9583ad"];
 	
-	return (cumul) => gradient(Math.round(cumul * noColours));
+	return (cumul) => {
+		if (Number(cumul) >= 1) {
+			return palette[noColours - 1];
+		}
+		if (Number(cumul) <= 0) {
+			return palette[0];
+		}
+		return palette[Math.floor(cumul * noColours)];
+	};
 })();
+
 
 // type = "year" or "country"
 const type = "country";
@@ -68,7 +74,7 @@ if (type === "country") {
                     // Creates axes
                     const x = d3.scaleBand()
                         .range([0, width])
-                        .padding(0.1)
+                        .padding(0.2)
                         .domain(totalData.map(d => d.country));
                     const y = d3.scaleLinear()
                         .range([height, 0]);
@@ -111,11 +117,11 @@ if (type === "country") {
 						});
 						
 						return (d1) => {
-							const it = Math.round((Math.max(d1.cumul, 0) ** 0.5) * granul);
+							const it = Math.floor((Math.max(d1.cumul, 0) ** 0.5) * granul);
 							svg.selectAll(".levelLine")
 								.attr("y1", d => y(arr[d.country][it]))
 								.attr("y2", d => y(arr[d.country][it]))
-								.attr("stroke", "#32a850");
+								.attr("stroke", "black");
 						};
 					})();
 							
@@ -157,7 +163,7 @@ if (type === "country") {
 								// Creates axes
 								const x = d3.scaleBand()
 									.range([0, width])
-									.padding(0.1)
+									.padding(0.2)
 									.domain(data3.map(d => d.year));
 								const y = d3.scaleLinear()
 									.range([height, 0]);
