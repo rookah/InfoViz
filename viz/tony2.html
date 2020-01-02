@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <style type="text/css" media="screen, print">
+            body { margin: 30px 50px; font-family: sans-serif; }
+        </style>
+        <title></title>
+    </head>
+    <body>
+        <script src="../vendor/d3/d3.js"></script>
+        <script>
+
+//main
+const margin = {top: 100, right: 50, bottom: 150, left: 25};
+const width = 800 - margin.left - margin.right;
+const height = 500 - margin.top - margin.bottom;
+
+const svg = d3.select("body").append("svg")
+	.attr("id", "main")
+    .attr("width", String(width + margin.left + margin.right))
+    .attr("height", String(height + margin.top + margin.bottom))
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+// getColour converts a row in the dataset to a colour
+const getColour = (() => {
+	const noColours = 10;
+	const gradient = d3.scaleLinear().domain([0, noColours])
+		//.range(["yellow", "blue"]);
+		.range(["#FFFFFF", "#000000"]);
+		//.range(["#aeb01e", "#1e25b0"]);
+	
+	return (cumul) => gradient(Math.round(cumul * noColours));
+})();
+
+// type = "year" or "country"
+const type = "country";
+
+if (type === "country") {
+    // Loads list of countries
+    d3.tsv("../data/countries.tsv", (error, data) => {
+        if(error) throw error;
+
+        const countries = data;
+
+        let totalData = [];
+
+        const noCountries = 39;
+        let counter = 0;
+        for (let i = 0; i < countries.length; ++i) {
+
+            // Loads income data
+            d3.tsv(`../data/income/${countries[i].code}.tsv`, (error, data2) => {
+                if(error) return;
+               
+                // Combines and filters data to the most recent year
+                const latestData = data2.filter(d => d.year === data2[0].year);
+                latestData.forEach((d) => {d.country = i; d.code = countries[i].code;});
+                totalData = totalData.concat(latestData);
+
+                ++counter;
+
+                // Checks if all the data has finished loading
+                if (counter === noCountries) {
+                    totalData.sort((a,b) => (countries[a.country].name > countries[b.country].name) ? 1 : 0);
+
+                    // Creates axes
+                    const x = d3.scaleBand()
+                        .range([0, width])
+                        .padding(0.1)
+                        .domain(totalData.map(d => d.country));
+                    const y = d3.scaleLinear()
+                        .range([height, 0]);
+                    const xAxis = d3.axisBottom(x)
+                        .tickFormat((d) => countries[d].name);
+
+                    svg.append("g")
+                        .attr("transform", `translate(0, ${height})`)
+                        .call(xAxis)
+                        .selectAll("text")
+                            .attr("font-family", "sans-serif")
+                            .attr("font-size", "8px")
+                            .style("text-anchor", "end")
+                            .attr("dx", "-.8em")
+                            .attr("dy", ".15em")
+                            .attr("transform", d => "rotate(-65)");
+
+                    svg.append("g")
+                        .attr("class", "y axis")
+                        .call(d3.axisLeft(y));
+					
+					// Updates level lines
+					const updateLevelLines = (function() {
+					
+						// Granularity
+						const granul = 10000;
+						
+						var arr = new Array(countries.length);
+						var it = new Array(countries.length);
+						for (let k = 0; k < countries.length; ++k) {
+							it[k] = 0;
+							arr[k] = new Array(granul);
+						}
+						
+						totalData.forEach(d => {
+							while (Math.max(d.cumul, 0) >= (it[d.country] / granul) ** 2) {
+								arr[d.country][it[d.country]] = d.high;
+								++it[d.country];
+							}
+						});
+						
+						return (d1) => {
+							const it = Math.round((Math.max(d1.cumul, 0) ** 0.5) * granul);
+							svg.selectAll(".levelLine")
+								.attr("y1", d => y(arr[d.country][it]))
+								.attr("y2", d => y(arr[d.country][it]))
+								.attr("stroke", "#32a850");
+						};
+					})();
+							
+                    // Creates bars
+                    svg.selectAll(".bar")
+						.append("div")
+						.attr("id", (d) => String(d.country))
+                        .data(totalData)
+                        .enter()
+                        .append("rect")
+                            .attr("class", "bar")
+                            .attr("x", (d) => String(x(d.country)))
+                            .attr("y", (d) => String((1 - d.high) * height))
+                            .attr("width", x.bandwidth())
+                            .attr("height", (d) => String(d.width * height + 1))
+							.attr("fill", d => getColour(d.cumul))
+							.on("mouseover", updateLevelLines)
+							.on("mouseout", () => {
+								svg.selectAll(".levelLine").attr("stroke", "");
+							})
+
+						.on("click", function(d) {
+							// Compute year viz on-the-fly
+							
+							d3.tsv(`../data/income/${d.code}.tsv`, (error, data3) => {
+								if(error) return;
+
+								d3.select("#sub").remove();
+
+								svg_sub = d3.select("body").append("svg")
+									.attr("id", "sub")
+									.attr("width", String(width + margin.left + margin.right))
+									.attr("height", String(height + margin.top + margin.bottom))
+									.append("g")
+									.attr("transform", `translate(${margin.left},${margin.top})`);
+
+								data3.sort((a,b) => (a.year > b.year) ? 1 : 0);
+
+								// Creates axes
+								const x = d3.scaleBand()
+									.range([0, width])
+									.padding(0.1)
+									.domain(data3.map(d => d.year));
+								const y = d3.scaleLinear()
+									.range([height, 0]);
+								const xAxis = d3.axisBottom(x);
+
+								svg_sub.append("g")
+									.attr("transform", `translate(0, ${height})`)
+									.call(xAxis)
+									.selectAll("text")
+									.attr("font-family", "sans-serif")
+									.attr("font-size", "8px")
+									.style("text-anchor", "end")
+									.attr("dx", "-.8em")
+									.attr("dy", ".15em")
+									.attr("transform", (d) => "rotate(-65)");
+
+								svg_sub.append("g")
+									.attr("class", "y axis")
+									.call(d3.axisLeft(y));
+
+								// Creates bars
+								svg_sub.selectAll(".bar")
+									.data(data3)
+									.enter()
+									.append("rect")
+									.attr("class", "bar")
+									.attr("x", (d) => String(x(d.year)))
+									.attr("y", (d) => String((1 - d.high) * height))
+									.attr("width", x.bandwidth())
+									.attr("height", (d) => String(d.width * height + 1))
+									.attr("fill", d => getColour(d.cumul));
+							});
+						});
+					
+					// First data point for each country
+					const firstData = totalData.filter(d => Number(d.low) === 0);
+						
+					// Creates level lines
+					svg.selectAll(".levelLine")
+						.data(firstData)
+						.enter()
+						.append("line")
+							.attr("class", "levelLine")
+							.attr("x1", d => String(x(d.country)))
+							.attr("x2", d => String(x(d.country) + x.bandwidth()))
+							.attr("y1", d => String(50))
+							.attr("y2", d => String(50))
+							.attr("stroke-width", "2");
+				}
+            });
+        }
+    });
+}
+
+if (type === "year") {
+    d3.tsv(`../data/income/FR.tsv`, (error, data) => {
+        if(error) return;
+
+        data.sort((a,b) => (a.year > b.year) ? 1 : 0);
+
+        // Creates axes
+        const x = d3.scaleBand()
+            .range([0, width])
+            .padding(0.1)
+            .domain(data.map(d => d.year));
+        const y = d3.scaleLinear()
+            .range([height, 0]);
+        const xAxis = d3.axisBottom(x);
+
+        svg.append("g")
+            .attr("transform", `translate(0, ${height})`)
+            .call(xAxis)
+            .selectAll("text")
+                .attr("font-family", "sans-serif")
+                .attr("font-size", "8px")
+                .style("text-anchor", "end")
+                .attr("dx", "-.8em")
+                .attr("dy", ".15em")
+                .attr("transform", (d) => "rotate(-65)");
+
+        svg.append("g")
+            .attr("class", "y axis")
+            .call(d3.axisLeft(y));
+
+        // Creates bars
+        svg.selectAll(".bar")
+            .data(data)
+            .enter()
+            .append("rect")
+                .attr("class", "bar")
+                .attr("x", (d) => String(x(d.year)))
+                .attr("y", (d) => String((1 - d.high) * height))
+                .attr("width", x.bandwidth())
+                .attr("height", (d) => String(d.width * height + 1))
+				.attr("fill", d => getColour(d.cumul));
+    });
+}
+        </script>
+    </body>
+</html>
