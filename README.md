@@ -27,3 +27,21 @@ The attributes present in the tables are:
 * **histogram.html** a basic histogram showing how to select a specific year, and how to use **low**, **high**, **width** and **share**
 * **cdf.html** a cumulative distribution function plot showing a use for **cumul**
 * **time.html** a time series visualization
+
+# PROJECT
+
+## Group members
+
+* **Amélina Douard**
+* **Richard Faucheron**
+* **Lucas Gisselaire**
+* **Bruno Lehouque**
+* **Tony Zheng**
+
+## Questions and associated visualizations
+
+* **Question:**
+    * **File:**
+    * **Graph type:**
+    * **Interaction:**
+    * **Design justification:**
