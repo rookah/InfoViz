@@ -23,10 +23,12 @@
         <div>
             <label for='countrySelector'>Country</label>
             <select id='countrySelector'>
+				<!--
                 <option value='CN'>China</option>
                 <option value='FR'>France</option>
                 <option value='RU'>Russian Federation</option>
                 <option value='US'>USA</option>
+				-->
             </select>
         </div>
 		<!-- Sliders -->
@@ -79,25 +81,28 @@ function countryName(countryCode) {
 }
 
 function initDropdown(countries) {
-/*
-    d3.select('#countrySelector')
-        .selectAll('option')
-        .data(countries)
-        .enter()
-        .append('option')
-            .attr('value', (d, i) => i)
-            .text(d => d.name);
-*/
-/*
-    let dropdown = d3.select('#countrySelector');
-    for (let i = 0; i < countries.length; ++i) {
-        dropdown.append('option')
-            .attr('value', countries[i].code)
-            .text(countries[i].name);
-    }
-*/
-    d3.select('#countrySelector')
-        .on('change', d => updateGraph());
+    d3.tsv('../data/countries.tsv', function(error, data) {
+        if (error) throw error;
+
+		d3.select('#countrySelector')
+			.selectAll('option')
+			.data(data)
+			.enter()
+			.append('option')
+			.attr('value', (d, i) => d.code)
+			.text(d => d.name);
+		let dropdown = d3.select('#countrySelector');
+
+		for (let i = 0; i < countries.length; ++i) {
+			dropdown.append('option')
+				.attr('value', countries[i].code)
+				.text(countries[i].name);
+		}
+
+		d3.select('#countrySelector')
+			.on('change', d => updateGraph());
+	});
+
 }
 
 
