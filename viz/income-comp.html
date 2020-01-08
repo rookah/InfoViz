@@ -93,12 +93,6 @@ function initDropdown(countries) {
 			.text(d => d.name);
 		let dropdown = d3.select('#countrySelector');
 
-		for (let i = 0; i < countries.length; ++i) {
-			dropdown.append('option')
-				.attr('value', countries[i].code)
-				.text(countries[i].name);
-		}
-
 		d3.select('#countrySelector')
 			.on('change', d => updateGraph());
 	});
