@@ -391,7 +391,6 @@ d3.tsv(`../data/income_gini.tsv`, (error, gini) => {
 				d3.select(".buttonAll")
 					.on("click", (evt) => {
 						timeChart = false;
-						selectedYear = defaultYear;
 						drawChart();
 						buttonAll.style.display = "none";
 						inputDiv.style.display = "inline-block";
