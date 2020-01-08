@@ -11,6 +11,7 @@
 		<h1>Comparison of income shares</h1>
 
 		<!-- Selector -->
+<!--
 		<form>
 			  <div>
 			    <label for="slct_country">Choose country :</label>
@@ -18,16 +19,26 @@
 					<button type='button' onclick="updateGraph()">Select</button>
 			  </div>
 		</form>
+-->
+        <div>
+            <label for='countrySelector'>Country</label>
+            <select id='countrySelector'>
+                <option value='CN'>China</option>
+                <option value='FR'>France</option>
+                <option value='RU'>Russian Federation</option>
+                <option value='US'>USA</option>
+            </select>
+        </div>
 		<!-- Sliders -->
 		<div>
-			<label for="high_value">Choose high value :</label>
-			<!-- <p class="col-sm-2" id="high_value" > -->
-			<div class="col-sm" id="high_slider">
-		</div>
-		<div>
-			<label for="low_value">Choose low value :</label>
+			<label for="low_value">Choose bottom %:</label>
 			<!-- <p class="col-sm-2" id="low_value" > -->
 			<div class="col-sm" id="low_slider">
+		</div>
+        <div>
+			<label for="high_value">Choose top %:</label>
+			<!-- <p class="col-sm-2" id="high_value" > -->
+			<div class="col-sm" id="high_slider">
 		</div>
 		<!-- Scripts -->
 		<script src="../vendor/d3/d3.js"></script>
@@ -36,19 +47,19 @@
 
 /*========== Function definitions ==========*/
 
-function lin_approx(x, xmin, xmax, ymin, ymax) {
+function linApprox(x, xmin, xmax, ymin, ymax) {
     return ymin + (ymax - ymin) * (x - xmin) / (xmax - xmin);
 }
 
-function low_cumul(percentile, d) {
-    return lin_approx(percentile, d.low, d.high, d.cumul - d.share, d.cumul);
+function lowCumul(percentile, d) {
+    return linApprox(percentile, d.low, d.high, d.cumul - d.share, d.cumul);
 }
 
-function high_cumul(percentile, d) {
-    return 1.0 - lin_approx(percentile, d.low, d.high, d.cumul - d.share, d.cumul);
+function highCumul(percentile, d) {
+    return 1.0 - linApprox(percentile, d.low, d.high, d.cumul - d.share, d.cumul);
 }
 
-function load_countries() {
+function loadCountries() {
     var temp = [];
     d3.tsv('../data/countries.tsv', function(error, data) {
         if (error) throw error;
@@ -58,20 +69,43 @@ function load_countries() {
     return temp;
 }
 
-function country_name(country_code) {
+function countryName(countryCode) {
     for (let i = 0; i < countries.length; ++i) {
-        if (countries[i].code == country_code) {
+        if (countries[i].code == countryCode) {
             return countries[i].name;
         }
     }
     return 'unknown';
 }
 
+function initDropdown(countries) {
+/*
+    d3.select('#countrySelector')
+        .selectAll('option')
+        .data(countries)
+        .enter()
+        .append('option')
+            .attr('value', (d, i) => i)
+            .text(d => d.name);
+*/
+/*
+    let dropdown = d3.select('#countrySelector');
+    for (let i = 0; i < countries.length; ++i) {
+        dropdown.append('option')
+            .attr('value', countries[i].code)
+            .text(countries[i].name);
+    }
+*/
+    d3.select('#countrySelector')
+        .on('change', d => updateGraph());
+}
+
+
 // Function used when "Select" button is clicked
 function updateGraph() {
 
 	// get the text inputed
-	var country = document.getElementById("slct_country").value.toUpperCase();
+	var country = document.getElementById('countrySelector').value.toUpperCase();
 	// get high and low values
 	var hi_percentile = hiSlider.value();
 	var lo_percentile = loSlider.value();
@@ -86,12 +120,12 @@ function updateGraph() {
         lo_data = data
             .filter(d => d.low <= lo_percentile && lo_percentile < d.high)
             .sort((a, b) => +a.year - +b.year)
-            .map(function (d) { return { year: d.year, cumul: low_cumul(lo_percentile, d)}; });
+            .map(function (d) { return { year: d.year, cumul: lowCumul(lo_percentile, d)}; });
         // Income of highest percentile
         hi_data = data
             .filter(d => d.low <= hi_percentile && hi_percentile < d.high)
             .sort((a, b) => +a.year - +b.year)
-            .map(function (d) { return { year: +d.year, cumul: high_cumul(hi_percentile, d)}; });
+            .map(function (d) { return { year: +d.year, cumul: highCumul(hi_percentile, d)}; });
 
         x.domain(d3.extent(data, d => +d.year));
 
@@ -150,7 +184,7 @@ function updateGraph() {
     		.attr('text-anchor', 'middle');
 
         svg.append('text')
-            .text(`Country: ${country_name(country)}`)
+            .text(`Country: ${countryName(country)}`)
                 .attr('transform', `translate(${width / 2}, -20)`)
                 .attr('text-anchor', 'middle')
 
@@ -217,7 +251,7 @@ gloSlider.call(loSlider);
 d3.select('p#low_value').text(d3.format('.0%')(loSlider.value()));
 
 // ============ Create svg ============
-var countries = load_countries();
+var countries = loadCountries();
 
 var margin = {top: 50, right: 100, bottom: 100, left: 100},
     width = 800 - margin.left - margin.right,
@@ -240,6 +274,8 @@ var svg = d3.select('body')
 var lo_color = 'blue';
 var hi_color = 'darkorange';
 
+initDropdown(countries);
+updateGraph();
 
 		</script>
 	</body>
