@@ -5,13 +5,64 @@
 		<style type="text/css" media="screen, print">
 			body { margin: 30px 50px; font-family: sans-serif; }
 		</style>
-		<title></title>
+		<title>global evolution of GINI index</title>
 	</head>
 	<body>
-	<h1>Graph</h1>
-
+		<h1>Countries incomes</h1>
+		<h2>Years selection</h2>
+		<div>
+			select first year
+			<select id='yearSelector_low'></select>
+			select last year
+			<select id='yearSelector_high'></select>
+		</div>
 		<script src="../vendor/d3/d3.js"></script>
 		<script>
+
+/*========== Zones definitions ==========*/
+
+// Define margin
+const margin = {top: 50, right: 100, bottom: 50, left: 50};
+const width = 800 - margin.left - margin.right;
+const height = 500 - margin.top - margin.bottom;
+const text_size = 8;
+
+// create graph zone
+d3.select("body").append("h2").text("Visualization");
+var svg = d3.select("body").append("svg")
+    .attr("width", String(width + margin.left + margin.right))
+    .attr("height", String(height + margin.top + margin.bottom))
+	.append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+// create legend zone
+d3.select("body").append("div").append("h2").text("Countries selection");
+var svg_legend = d3.select("body").append("svg")
+    .attr("width", String(width + margin.left + margin.right))
+    .attr("height", String(height + margin.top + margin.bottom))
+	.append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+// Add the text label for the X axis
+svg.append('text')
+	.attr('x', width / 2)
+	.attr('y', height + margin.bottom)
+	.style('text-anchor', 'middle')
+	.text('Year');
+
+// Add the text label for the Y axis
+svg.append('text')
+	.attr('transform', 'rotate(-90)')
+	.attr('y', -margin.left)
+	.attr('x', -height / 2)
+	.attr('dy', '1em')
+	.style('text-anchor', 'middle')
+	.text('GINI index');
+
+/*========== Menu definition ==========*/
+var years=[1905, 1910, 1914, 1918, 1920, 1930, 1936, 1940, 1945, 1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020]
+
+/*========== Function definitions ==========*/
 
 // getColour converts a row in the dataset to a colour
 function getColour(i) {
@@ -21,58 +72,70 @@ function getColour(i) {
 	}else{
 		const gradient = d3.scaleLinear().domain([17, 40])
 			.range(["yellow", "blue"]);
-			//.range(["#FFFFFF", "#000000"]);
-			//.range(["#aeb01e", "#1e25b0"]);
 		return gradient(i);
 	}
 	
 };
 
-// Define margin
-const margin = {top: 50, right: 100, bottom: 50, left: 50};
-const width = 800 - margin.left - margin.right;
-const height = 500 - margin.top - margin.bottom;
-const text_size = 8;
+function initDropdown_low() {
+	d3.select('#yearSelector_low')
+		.selectAll('option')
+		.data(years)
+		.enter()
+		.append('option')
+		.text(function (d) { return d; })
+		.attr("value", function (d,i) { return +d; });
+	let dropdown = d3.select('#yearSelector_low');
+	d3.select('#yearSelector_low').on('change', d => updateGraph());
+}
 
-// create graph zone
-var svg = d3.select("body").append("svg")
-    .attr("width", String(width + margin.left + margin.right))
-    .attr("height", String(height + margin.top + margin.bottom))
-	.append("g")
-    .attr("transform", `translate(${margin.left},${margin.top})`);
+function initDropdown_high() {
+	d3.select('#yearSelector_high')
+		.selectAll('option')
+		.data(years)
+		.enter()
+		.append('option')
+		.text(function (d) { return d; })
+		.attr("value", function (d,i) { return +d; })
+		.property("selected", function (d) { return 2020; });
+	let dropdown = d3.select('#yearSelector_high');
+	d3.select('#yearSelector_high').on('change', d => updateGraph());
+}
 
-// create legend zone
-var svg_legend = d3.select("body").append("svg")
-    .attr("width", String(width + margin.left + margin.right))
-    .attr("height", String(height + margin.top + margin.bottom))
-	.append("g")
-    .attr("transform", `translate(${margin.left},${margin.top})`);
+/*========== Draw graph and axes ==========*/
+function updateGraph(low_year, high_year) {
+	// get values
+	if (low_year==undefined){
+		var low_year = document.getElementById('yearSelector_low').value;
+	}
+	if (high_year==undefined){
+		var high_year = document.getElementById('yearSelector_high').value;
+	}
 
+	// clear elemnts from th former svg (do not remove the svg itself)
+	svg.selectAll("*").remove();
 
-
-// Loads list of countries
-d3.tsv("../data/countries.tsv", function(error, data){
+	// ============ Load data ============
+	d3.tsv("../data/countries.tsv", function(error, data){// Loads list of countries
 	if(error) throw error;
-
 	const countries = data;
+	
+	d3.tsv(`../data/income_gini.tsv`, function(error, data2) {// Loads income data
+	if(error) throw error;
+	const income = data2;
 
-	// Loads income data
-	d3.tsv(`../data/income_gini.tsv`, function(error, data2) {
-		if(error) return;
-		const income = data2;
-
+	// ============ Create graph ============
 	// Create axes of graph
-			// axis x
+		// axis x
 	var scale_x = d3.scaleLinear()
-			.range([0, width])
-			.domain([1905,2020]);
+		.range([0, width])
+		.domain([low_year,high_year]);
 	var xAxis = d3.axisBottom(scale_x);
-			// axis y
+		// axis y
 	var scale_y = d3.scaleLinear()
 		.range([height, 0])
 		.domain([0,0.9]);
 	var yAxis = d3.axisLeft(scale_y);
-
 
 	//Draw axes
 	svg.append("g")
@@ -82,31 +145,16 @@ d3.tsv("../data/countries.tsv", function(error, data){
 	svg.append("g")
 		.attr("class", "y axis")
 		.call(yAxis);
-	
 
-        // Add the text label for the X axis
-        svg.append('text')
-            .attr('x', width / 2)
-            .attr('y', height + margin.bottom)
-            .style('text-anchor', 'middle')
-            .text('Year');
-        // Add the text label for the Y axis
-        svg.append('text')
-            .attr('transform', 'rotate(-90)')
-            .attr('y', -margin.left)
-            .attr('x', -height / 2)
-            .attr('dy', '1em')
-            .style('text-anchor', 'middle')
-            .text('GINI index');
-
-
-	//Draw dots
+    	//Draw dots
 	var count=0;
 	var placement=0;
 	for (let i = 0; i < countries.length; ++i) {
 		current=countries[i].code;
 		country_data=income.filter(function(d){return current==d.country;});
+		
 		if(country_data.length>=1){
+			country_data=country_data.filter(function(d){return d.year >= low_year && d.year <= high_year;});
 			country_name=countries[i].name;
 			var dots = svg.selectAll("dot")
        	        		.data(country_data)
@@ -133,8 +181,8 @@ d3.tsv("../data/countries.tsv", function(error, data){
                 			.attr("y2", function(d){return scale_y(p2.gini_index)})
                 			.style("stroke", getColour(count));
 			}
+
 			// Add legend
-			
 			svg_legend.selectAll("dot")
        	        		.data(country_data)
 		       		.enter()
@@ -154,10 +202,17 @@ d3.tsv("../data/countries.tsv", function(error, data){
 			}
 			count++;
 		}
-	}//end for
+	}//end for 1
 	});//end loads income data
 
 });//end loads list of countries
+
+} // end function updateGraph()
+
+//==================================
+initDropdown_low();
+initDropdown_high();
+updateGraph(1905,2020);
 
 		</script>
 	</body>
