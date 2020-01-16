@@ -5,42 +5,26 @@
 		<style type="text/css" media="screen, print">
 			body { margin: 30px 50px; font-family: sans-serif; }
 		</style>
-		<title>Comparison of shares</title>
+		<title>Evolution of Income Distribution per Country</title>
 	</head>
 	<body>
-		<h1>Comparison of income shares</h1>
+		<h1>Evolution of Income Distribution per Country</h1>
 
 		<!-- Selector -->
-<!--
-		<form>
-			  <div>
-			    <label for="slct_country">Choose country :</label>
-			    <input type="text" id="slct_country" value='US'>
-					<button type='button' onclick="updateGraph()">Select</button>
-			  </div>
-		</form>
--->
         <div>
             <label for='countrySelector'>Country</label>
-            <select id='countrySelector'>
-				<!--
-                <option value='CN'>China</option>
-                <option value='FR'>France</option>
-                <option value='RU'>Russian Federation</option>
-                <option value='US'>USA</option>
-				-->
-            </select>
+            <select id='countrySelector'></select>
         </div>
 		<!-- Sliders -->
-		<div>
-			<label for="low_value">Choose bottom %:</label>
-			<!-- <p class="col-sm-2" id="low_value" > -->
-			<div class="col-sm" id="low_slider">
-		</div>
         <div>
 			<label for="high_value">Choose top %:</label>
 			<!-- <p class="col-sm-2" id="high_value" > -->
 			<div class="col-sm" id="high_slider">
+		</div>
+        <div>
+			<label for="low_value">Choose bottom %:</label>
+			<!-- <p class="col-sm-2" id="low_value" > -->
+			<div class="col-sm" id="low_slider">
 		</div>
 		<!-- Scripts -->
 		<script src="../vendor/d3/d3.js"></script>
@@ -61,14 +45,17 @@ function highCumul(percentile, d) {
     return 1.0 - linApprox(percentile, d.low, d.high, d.cumul - d.share, d.cumul);
 }
 
-function loadCountries() {
-    var temp = [];
+function initCountries(nextFunc) {
+    let tempCountries = new Map();
     d3.tsv('../data/countries.tsv', function(error, data) {
         if (error) throw error;
 
-        data.forEach(d => temp.push(d));
+        data.forEach(function(d) {
+            tempCountries.set(d.code, d.name);
+        });
+        nextFunc();
     });
-    return temp;
+    return tempCountries;
 }
 
 function countryName(countryCode) {
@@ -77,24 +64,25 @@ function countryName(countryCode) {
             return countries[i].name;
         }
     }
-    return 'unknown';
+    return countries[countryCode];
 }
 
-function initDropdown(countries) {
+function initDropdown(onUpdate) {
     d3.tsv('../data/countries.tsv', function(error, data) {
         if (error) throw error;
 
 		d3.select('#countrySelector')
 			.selectAll('option')
-			.data(data)
+			.data(data.filter(d => COUNTRIES_WITH_INCOME.has(d.code)))
 			.enter()
 			.append('option')
-			.attr('value', (d, i) => d.code)
-			.text(d => d.name);
-		let dropdown = d3.select('#countrySelector');
+			    .attr('value', (d, i) => d.code)
+			    .text(d => d.name);
 
 		d3.select('#countrySelector')
-			.on('change', d => updateGraph());
+            .property('selectedIndex', START_INDEX)
+			.on('change', d => onUpdate());
+        onUpdate();
 	});
 
 }
@@ -106,7 +94,7 @@ function updateGraph() {
 	// get the text inputed
 	var country = document.getElementById('countrySelector').value.toUpperCase();
 	// get high and low values
-	var hi_percentile = hiSlider.value();
+	var hi_percentile = 1.0 - hiSlider.value();
 	var lo_percentile = loSlider.value();
 	// clear elemnts from th former svg (do not remove the svg itself)
 	svg.selectAll("*").remove();
@@ -134,13 +122,13 @@ function updateGraph() {
 
     	var lo_income = svg.append("path").datum(lo_data)
     		.attr("d", ts)
-    		.attr("stroke", lo_color)
+    		.attr("stroke", LO_COLOR)
     		.attr("stroke-width", 2)
     		.attr("fill", "none");
 
     	var hi_income = svg.append("path").datum(hi_data)
     		.attr("d", ts)
-    		.attr("stroke", hi_color)
+    		.attr("stroke", HI_COLOR)
     		.attr("stroke-width", 2)
     		.attr("fill", "none");
 
@@ -183,7 +171,7 @@ function updateGraph() {
     		.attr('text-anchor', 'middle');
 
         svg.append('text')
-            .text(`Country: ${countryName(country)}`)
+            .text(`Country: ${countries.get(country)}`)
                 .attr('transform', `translate(${width / 2}, -20)`)
                 .attr('text-anchor', 'middle')
 
@@ -192,18 +180,19 @@ function updateGraph() {
     		.text(`Bottom ${lf(+lo_percentile)}`)
                 .attr('transform', `translate(-10, ${height * 3 / 4}) rotate(-90)`)
                 .attr('text-anchor', 'middle')
-                .attr('fill', lo_color);
+                .attr('fill', LO_COLOR);
         svg.append('text')
             .text(`Top ${lf(1.0 - hi_percentile)}`)
                 .attr('transform', `translate(-10, ${height / 4}) rotate(-90)`)
                 .attr('text-anchor', 'middle')
-                .attr('fill', hi_color);
+                .attr('fill', HI_COLOR);
 
     });
 } // end function updateGraph()
 
 // ============ Sliders ============
-var highRange = [0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 0.99];
+var highRange = [0.01, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45,
+                 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 0.99];
 var hiSlider = d3
 	.sliderBottom()
 	.min(d3.min(highRange))
@@ -211,7 +200,7 @@ var hiSlider = d3
 	.width(500)
 	.tickFormat(d3.format('.0%'))
 	.ticks(10)
-	.default(0.90)
+	.default(0.10)
 	.on('onchange', val => {
 		   d3.select('p#high_value').text(d3.format('.0%')(val));
            updateGraph();
@@ -226,7 +215,8 @@ var ghiSlider = d3
 ghiSlider.call(hiSlider);
 d3.select('p#high_value').text(d3.format('.0%')(hiSlider.value()));
 
-var lowRange = [0.01, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50];
+var lowRange = [0.01, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45,
+                0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 0.99];
 var loSlider = d3
 	.sliderBottom()
 	.min(d3.min(lowRange))
@@ -250,7 +240,17 @@ gloSlider.call(loSlider);
 d3.select('p#low_value').text(d3.format('.0%')(loSlider.value()));
 
 // ============ Create svg ============
-var countries = loadCountries();
+var COUNTRIES_WITH_INCOME = new Set([
+        'AE', "BH", 'BR', 'CI', 'CN', 'CN-RU', 'CN-UR', 'CZ', 'DE', 'EG', 'FR',
+        'IN', 'IR', 'JO', 'KR', 'KW', 'LB', 'MY', 'PL', 'PS', 'QA', 'RU', 'SI',
+        'TH', 'TR', 'US', 'XF-MER', 'XL', 'XL-MER', 'XM', 'XN', 'XN-MER', 'XR',
+        'XR-MER', 'YE'
+    ]);
+var START_INDEX = 10;
+var LO_COLOR = 'blue';
+var HI_COLOR = 'darkorange';
+
+var countries = initCountries(() => initDropdown(updateGraph));
 
 var margin = {top: 50, right: 100, bottom: 100, left: 100},
     width = 800 - margin.left - margin.right,
@@ -269,12 +269,6 @@ var svg = d3.select('body')
         .attr('height', height + margin.top + margin.bottom)
     .append('g')
         .attr('transform', `translate(${margin.left}, ${margin.top})`);
-
-var lo_color = 'blue';
-var hi_color = 'darkorange';
-
-initDropdown(countries);
-updateGraph();
 
 		</script>
 	</body>
