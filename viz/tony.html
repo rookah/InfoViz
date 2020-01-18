@@ -170,6 +170,9 @@ function unformatYear(y) {
 }
 const maxYear = 120;
 
+let france;
+
+let countryList = [];
 
 // Loads list of countries
 d3.tsv("../data/countries.tsv", (error, countries) => {
@@ -192,20 +195,27 @@ d3.tsv(`../data/income_gini.tsv`, (error, gini) => {
 		   
 			dataTemp.forEach(d => {
 				d.country = i;
-				d.year = unformatYear(d.year);
 				d.code = countries[i].code;
 				d.cumul = Math.min(Math.max(d.cumul, 0), 1);
 				d.low = Math.min(Math.max(d.low, 0), 1);
 				d.high = Math.min(Math.max(d.high, 0), 1);
 				gini.forEach((obj) => {
-					if (typeof d.gini === "undefined" && obj.country === countries[i].code && obj.year === dataTemp[0].year) {
+					if (obj.country === countries[i].code && obj.year === d.year) {
 						d.gini = obj.gini_index;
+						return;
 					}
 				});
+				d.year = unformatYear(d.year);
 			});
 			const latestData = dataTemp.filter(d => d.year === dataTemp[0].year);
 			if (latestData.length < 100) { return; }
 			data = data.concat(dataTemp);
+			
+			if (countries[i].code === "FR") {
+				france = i;
+			}
+			
+			countryList.push(i);
 
 			// Checks if all the data has finished loading
 			if (counter === noCountries) {
@@ -213,7 +223,9 @@ d3.tsv(`../data/income_gini.tsv`, (error, gini) => {
 				let selectedCountry = -1;
 				
 				let prevSelectedYear = -1;
-				let prevSelectedCountry = -1;
+				let prevSelectedCountry = france;
+				
+				countryList = countryList.sort((a, b) => d3.ascending(countries[a].name, countries[b].name));
 				
 				// Updates level lines
 				const updateLevelLines = (function() {
@@ -322,7 +334,7 @@ d3.tsv(`../data/income_gini.tsv`, (error, gini) => {
 					
 					const filteredData = data.filter(d => timeChart ? Number(d.country) === Number(selectedCountry) : Number(d.year) === Number(selectedYear));
 					
-					filteredData.sort((a, b) => (timeChart ? (a.year > b.year) : (a.gini > b.gini)) ? 1 : 0);
+					filteredData.sort((a, b) => (timeChart ? (a.year > b.year) : (a.gini < b.gini)) ? 1 : 0);
 					
 					x = d3.scaleBand().range([0, width]);
 					const extent = d3.extent(filteredData, d => timeChart ? d.year : d.country);
@@ -457,7 +469,7 @@ d3.tsv(`../data/income_gini.tsv`, (error, gini) => {
 							
 				let yearList = '<option value="-1">All</option>\n';
 				for (let ye = yearRange[1]; ye > yearRange[0]; --ye) {
-					yearList += `<option value${unformatYear(ye) === selectedYear ? " selected" : ""}="${ye}">${ye}</option>\n`;
+					yearList += `<option${unformatYear(ye) === selectedYear ? " selected" : ""} value="${ye}">${ye}</option>\n`;
 				}
 				
 				inputYear.innerHTML = yearList;
@@ -481,19 +493,15 @@ d3.tsv(`../data/income_gini.tsv`, (error, gini) => {
 				const inputCountry = document.getElementsByClassName("inputCountry")[0];
 				const inputCountryDiv = document.getElementsByClassName("inputCountryDiv")[0];
 				
-				let countryList = '<option value="-1">All</option>\n';
+				let countryListSelect = '<option value="-1">All</option>\n';
 				
 				const countryTrunc = 37;
 				
-				let previousCountry = "";
-				data.forEach((d) => {
-					if (d.country !== previousCountry) {
-						countryList += `<option value="${d.country}">${countries[d.country].name.slice(0, countryTrunc)}</option>\n`;
-						previousCountry = d.country;
-					}
+				countryList.forEach((i) => {
+					countryListSelect += `<option value="${i}">${countries[i].name.slice(0, countryTrunc)}</option>\n`;
 				});
 				
-				inputCountry.innerHTML = countryList;
+				inputCountry.innerHTML = countryListSelect;
 				
 				const inputCountryDivBox = inputCountryDiv.getBoundingClientRect();
 					
@@ -517,7 +525,7 @@ d3.tsv(`../data/income_gini.tsv`, (error, gini) => {
 				let noCatsList = "";
 			
 				for (let i = 1; i < maxCats + 1; ++i) {
-					noCatsList += `<option value${i === noCategs ? " selected" : ""}="${i}">${i}</option>\n`;
+					noCatsList += `<option${i === noCategs ? " selected" : ""} value="${i}">${i}</option>\n`;
 				}
 				
 				inputNoCats.innerHTML = noCatsList;
