@@ -6,39 +6,16 @@
 
 body { margin: 30px 50px; font-family: sans-serif; }
 
-.centred {
-	margin: auto;
-	width: 100%;
-}
-
-.title {
+.input, .button {
+	background-color: rgb(12,192,170);
+	font-weight: bold;
 	text-align: center;
-	font-size: 30px;
-	margin-bottom: 10px;
-}
-
-.inputDiv {
-	background-color: #3275fc;
-	width: 120px;
-	text-align: center;
-	padding: 2px;
 	border-radius: 2px;
 	user-select: none;
 	color: white;
 	position: absolute;
 	display: inline-block;
-}
-
-.button {
-	background-color: #3275fc;
-	width: 120px;
-	text-align: center;
-	padding: 2px;
-	border-radius: 2px;
-	user-select: none;
-	color: white;
-	position: absolute;
-	display: inline-block;
+	padding: 4px 8px; /* Change cssButtPad */
 }
 
 .button span {
@@ -46,12 +23,12 @@ body { margin: 30px 50px; font-family: sans-serif; }
 }
 
 .button:hover {
-	background-color: #689afd;
+	background-color: rgba(12,192,170,0.8);
 	cursor: pointer;
 }
 
 .button:active {
-	background-color: #9bbcfd;
+	background-color: rgba(12,192,170,0.9);
 }
 
 .tool-tip {
@@ -97,14 +74,22 @@ body { margin: 30px 50px; font-family: sans-serif; }
 
 <body>
 
-<div class="centred title">World Inequality</div>
 <div class="chart">
 	<div class="tool-tip"></div>
-	<div class="button buttonToggle">Unstack</div>
-	<div class="button buttonAll">All countries</div>
-	<div class="inputDiv">
+	<div class="button buttonStack">Unstack</div>
+	<div class="input inputYearDiv">
 		<label>Year:
 			<select class="inputYear"></select>
+		</label>
+	</div>
+	<div class="input inputCountryDiv">
+		<label>Country:
+			<select class="inputCountry"></select>
+		</label>
+	</div>
+	<div class="input inputNoCatsDiv">
+		<label>Groups:
+			<select class="inputNoCats"></select>
 		</label>
 	</div>
 </div>
@@ -124,7 +109,8 @@ const svg = d3.select(".chart").append("svg")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
 // Converts a data point into a category based on "cumul"
-const noCategs = 3;
+let noCategs = 3;
+const maxCats = 10;
 	
 function getCategory(cumul) {
 	if (Number(cumul) >= 1) {
@@ -138,19 +124,49 @@ function getCategory(cumul) {
 
 // getColour converts a row in the dataset to a colour
 const getColour = (() => {
-	const palette = ["#b4f8c8", "#fbc858", "#ff8210"];
+	// Generated from http://vrl.cs.brown.edu/color
+	const palette = ["rgb(12,192,170)", "rgb(254,133,173)", "rgb(143,202,64)", "rgb(246,122,254)", "rgb(8,169,229)", "rgb(14,198,28)", "rgb(250,121,34)", "rgb(154,178,143)", "rgb(172,139,248)", "rgb(234,175,22)"];
 	
 	return (cumul) => palette[getCategory(cumul)];
 })();
 
+// https://stackoverflow.com/questions/5560248/programmatically-lighten-or-darken-a-hex-color-or-rgb-and-blend-colors
+const pSBC=(p,c0,c1,l)=>{
+    let r,g,b,P,f,t,h,i=parseInt,m=Math.round,a=typeof(c1)=="string";
+    if(typeof(p)!="number"||p<-1||p>1||typeof(c0)!="string"||(c0[0]!='r'&&c0[0]!='#')||(c1&&!a))return null;
+    if(!this.pSBCr)this.pSBCr=(d)=>{
+        let n=d.length,x={};
+        if(n>9){
+            [r,g,b,a]=d=d.split(","),n=d.length;
+            if(n<3||n>4)return null;
+            x.r=i(r[3]=="a"?r.slice(5):r.slice(4)),x.g=i(g),x.b=i(b),x.a=a?parseFloat(a):-1
+        }else{
+            if(n==8||n==6||n<4)return null;
+            if(n<6)d="#"+d[1]+d[1]+d[2]+d[2]+d[3]+d[3]+(n>4?d[4]+d[4]:"");
+            d=i(d.slice(1),16);
+            if(n==9||n==5)x.r=d>>24&255,x.g=d>>16&255,x.b=d>>8&255,x.a=m((d&255)/0.255)/1000;
+            else x.r=d>>16,x.g=d>>8&255,x.b=d&255,x.a=-1
+        }return x};
+    h=c0.length>9,h=a?c1.length>9?true:c1=="c"?!h:false:h,f=this.pSBCr(c0),P=p<0,t=c1&&c1!="c"?this.pSBCr(c1):P?{r:0,g:0,b:0,a:-1}:{r:255,g:255,b:255,a:-1},p=P?p*-1:p,P=1-p;
+    if(!f||!t)return null;
+    if(l)r=m(P*f.r+p*t.r),g=m(P*f.g+p*t.g),b=m(P*f.b+p*t.b);
+    else r=m((P*f.r**2+p*t.r**2)**0.5),g=m((P*f.g**2+p*t.g**2)**0.5),b=m((P*f.b**2+p*t.b**2)**0.5);
+    a=f.a,t=t.a,f=a>=0||t>=0,a=f?a<0?t:t<0?a:a*P+t*p:0;
+    if(h)return"rgb"+(f?"a(":"(")+r+","+g+","+b+(f?","+m(a*1000)/1000:"")+")";
+    else return"#"+(4294967296+r*16777216+g*65536+b*256+(f?m(a*255):0)).toString(16).slice(1,f?undefined:-2)
+}
 
-				
+			
+const yearRange = [1914, 2016];
+
+// Formats the year for display purposes
 function formatYear(y) {
-	return y + 1900;
+	return y + yearRange[0];
 }		
 
+// Encodes the year
 function unformatYear(y) {
-	return y - 1900;
+	return y - yearRange[0];
 }
 const maxYear = 120;
 
@@ -193,12 +209,11 @@ d3.tsv(`../data/income_gini.tsv`, (error, gini) => {
 
 			// Checks if all the data has finished loading
 			if (counter === noCountries) {
+				let selectedYear = unformatYear(2000);
+				let selectedCountry = -1;
 				
-				const defaultYear = unformatYear(2000);
-				
-				let timeChart = false;
-				let selectedYear = defaultYear;
-				let selectedCountry = "";
+				let prevSelectedYear = -1;
+				let prevSelectedCountry = -1;
 				
 				// Updates level lines
 				const updateLevelLines = (function() {
@@ -206,8 +221,8 @@ d3.tsv(`../data/income_gini.tsv`, (error, gini) => {
 					// Granularity
 					const granul = 1000;
 					
-					var arr = new Array(countries.length);
-					var it = new Array(countries.length);
+					let arr = new Array(countries.length);
+					let it = new Array(countries.length);
 					for (let k = 0; k < countries.length; ++k) {
 						it[k] = new Array(maxYear);
 						arr[k] = new Array(maxYear);
@@ -236,7 +251,7 @@ d3.tsv(`../data/income_gini.tsv`, (error, gini) => {
 					};
 				})();
 				
-				var x, xAxis;
+				let x, xAxis;
 					
 				function yBar(d) {
 					if (!toggleStack) {
@@ -252,6 +267,50 @@ d3.tsv(`../data/income_gini.tsv`, (error, gini) => {
 					
 				const y = d3.scaleLinear()
 					.range([height, 0]);
+					
+				// When selecting a country
+				function selectCountry(country) {
+					selectedCountry = country;
+					if (selectedYear !== -1) {
+						prevSelectedYear = selectedYear;
+					}
+					selectedYear = -1;
+					drawChart();
+					
+					// In case change was not due to direct selection manipulation
+					inputYear.options[0].selected = true;
+					for (let opt, j = 0; opt = inputCountry.options[j]; ++j) {
+						if (opt.value === String(country)) {
+							inputCountry.selectedIndex = j;
+							break;
+						}
+					}
+				}
+				
+				// When selecting a year
+				function selectYear(year) {
+					selectedYear = year;
+					if (selectedCountry !== -1) {
+						prevSelectedCountry = selectedCountry;
+					}
+					selectedCountry = -1;
+					drawChart();
+					
+					// In case change was not due to direct selection manipulation
+					inputCountry.options[0].selected = true;
+					for (let opt, j = 0; opt = inputYear.options[j]; ++j) {
+						if (unformatYear(opt.value) === year) {
+							inputYear.selectedIndex = j;
+							break;
+						}
+					}
+				}
+				
+				// When selecting number of groups
+				function selectNoCats(noCats) {
+					noCategs = noCats;
+					drawChart();
+				}
 				
 				// Draws the chart
 				function drawChart() {
@@ -259,13 +318,9 @@ d3.tsv(`../data/income_gini.tsv`, (error, gini) => {
 					svg.selectAll(".levelLine").remove();
 					svg.selectAll(".axis").remove();
 					
-					const filteredData = data.filter(d => {
-						if (timeChart) {
-							return Number(d.country) === Number(selectedCountry);
-						} else {
-							return Number(d.year) === Number(selectedYear);
-						}
-					});
+					let timeChart = selectedYear === -1;
+					
+					const filteredData = data.filter(d => timeChart ? Number(d.country) === Number(selectedCountry) : Number(d.year) === Number(selectedYear));
 					
 					filteredData.sort((a, b) => (timeChart ? (a.year > b.year) : (a.gini > b.gini)) ? 1 : 0);
 					
@@ -310,28 +365,35 @@ d3.tsv(`../data/income_gini.tsv`, (error, gini) => {
 							.attr("height", d => String(d.width * height + 1))
 							.attr("fill", d => getColour(d.cumul))
 							.on("mouseover", d => {
-								if (!timeChart) {
-									document.body.style.cursor = "pointer";
-								}
+								document.body.style.cursor = "pointer";
+								
+								svg.selectAll(".bar")
+									.attr("fill", d1 => Number(d1.country) === Number(d.country) && Number(d1.year) === Number(d.year) ? pSBC(0.2, getColour(d1.cumul)) : getColour(d1.cumul));
+									
 								updateLevelLines(d);
 								toolTip.style.display = "block";
 								toolTip.innerText = `${countries[d.country].name} ${formatYear(d.year)}`;
 								toolTip.style.left = `${String(margin.left + x(timeChart ? d.year : d.country) + 0.5 * x.bandwidth())}px`;
-								toolTip.style.bottom = `${String((toggleStack ? y(1 - heightBelow[1][d.country]) : height) + margin.bottom + 10)}px`;
+								toolTip.style.bottom = `${String((toggleStack ? y(1 - heightBelow[1][d.country][d.year]) : height) + margin.bottom + 10)}px`;
+							})
+							.on("mousedown", d => {
+								svg.selectAll(".bar")
+									.attr("fill", d1 => Number(d1.country) === Number(d.country) && Number(d1.year) === Number(d.year) ? pSBC(0.1, getColour(d1.cumul)) : getColour(d1.cumul));
 							})
 							.on("mouseout", () => {
+								svg.selectAll(".bar")
+									.attr("fill", d1 => getColour(d1.cumul));
 								document.body.style.cursor = "auto";
 								svg.selectAll(".levelLine").attr("stroke", "");
 								toolTip.style.display = "none";
 							})
 							.on("click", d => {
 								document.body.style.cursor = "auto";
-								if (timeChart) { return; }
-								timeChart = true;
-								selectedCountry = d.country;
-								drawChart();
-								buttonAll.style.display = "inline-block";
-								inputDiv.style.display = "none";
+								if (timeChart) {
+									selectYear(d.year);
+									return;
+								}
+								selectCountry(d.country);
 							});
 							
 					// Creates level lines
@@ -345,16 +407,14 @@ d3.tsv(`../data/income_gini.tsv`, (error, gini) => {
 							.attr("y1", d => String(50))
 							.attr("y2", d => String(50))
 							.attr("stroke-width", "2");
-					d3.select(".chart-title")
-						.text(`Proportion of population holding equal amounts of income${timeChart ? "  (" + countries[selectedCountry].name + ")" : ""}`);
 				}
 				
-				var holder = 0;
-				var oldCat = "";
+				let holder = 0;
+				let oldCat = "";
 				
 				// Records the height below each category for each country and year (sum of heights of previous categories)
-				var heightBelow = Array(noCategs - 1);
-				for (let i = 0; i < noCategs; ++i) {
+				let heightBelow = Array(noCategs - 1);
+				for (let i = 0; i < maxCats; ++i) {
 					heightBelow[i] = Array(countries.length);
 					for (let j = 0; j < countries.length; ++j) {
 						heightBelow[i][j] = Array(maxYear);
@@ -362,15 +422,26 @@ d3.tsv(`../data/income_gini.tsv`, (error, gini) => {
 				}
 				
 				// Buttons
-				const buttonToggle = document.getElementsByClassName("buttonToggle")[0];
-				const buttonToggleBox = buttonToggle.getBoundingClientRect();
-					
-				buttonToggle.style.left = `${margin.left + width - buttonToggleBox.width}px`;
-				buttonToggle.style.top = `${margin.top - buttonToggleBox.height - 5}px`;
+				const buttonPadLeft = 6;
+				const buttonPadBottom = 6;
+				
+				// This is equal to the css padding of the button on left and right
+				const cssButtPad = 2 * 8;
+				
+				const buttonStack = document.getElementsByClassName("buttonStack")[0];
+				const buttonStackBox = buttonStack.getBoundingClientRect();
+				
+				// This is necessary as the text changes
+				buttonStack.style.width = `${buttonStackBox.width}px`;
+				
+				let cumButtonPosition = margin.left + width - buttonStackBox.width - cssButtPad;
+				
+				buttonStack.style.left = `${cumButtonPosition}px`;
+				buttonStack.style.top = `${margin.top - buttonStackBox.height - buttonPadBottom}px`;
 				
 				let toggleStack = false;
 						
-				d3.select(".buttonToggle")
+				d3.select(".buttonStack")
 					.on("click", (evt) => {
 						toggleStack = !toggleStack;
 						d3.select(".button").text(toggleStack ? "Stack" : "Unstack");
@@ -380,42 +451,90 @@ d3.tsv(`../data/income_gini.tsv`, (error, gini) => {
 							.attr("y", yBar)
 					});
 					
-				const buttonAll = document.getElementsByClassName("buttonAll")[0];
-				const buttonAllBox = buttonAll.getBoundingClientRect();
-				
-				buttonAll.style.display = "none";
-					
-				buttonAll.style.left = `${margin.left + width - buttonAllBox.width - buttonToggleBox.width - 5}px`;
-				buttonAll.style.top = `${margin.top - buttonAllBox.height - 5}px`;
-				
-				d3.select(".buttonAll")
-					.on("click", (evt) => {
-						timeChart = false;
-						drawChart();
-						buttonAll.style.display = "none";
-						inputDiv.style.display = "inline-block";
-					});
-					
-				// Input
+				// Year input
 				const inputYear = document.getElementsByClassName("inputYear")[0];
-				
-				const inputDiv = document.getElementsByClassName("inputDiv")[0];
-				const inputDivBox = inputDiv.getBoundingClientRect();
-					
-				inputDiv.style.left = `${margin.left + width - inputDivBox.width - buttonToggleBox.width - 5}px`;
-				inputDiv.style.top = `${margin.top - inputDivBox.height - 5}px`;
-				
-				inputYear.addEventListener("change", (e) => {
-					selectedYear = unformatYear(e.target.value);
-					drawChart();
-				});
-				
-				let options = "";
-				for (let ye = 2020; ye > 1900; --ye) {
-					options += `<option value${unformatYear(ye) === defaultYear ? " selected" : ""}="${ye}">${ye}</option>\n`;
+				const inputYearDiv = document.getElementsByClassName("inputYearDiv")[0];
+							
+				let yearList = '<option value="-1">All</option>\n';
+				for (let ye = yearRange[1]; ye > yearRange[0]; --ye) {
+					yearList += `<option value${unformatYear(ye) === selectedYear ? " selected" : ""}="${ye}">${ye}</option>\n`;
 				}
 				
-				inputYear.innerHTML = options;
+				inputYear.innerHTML = yearList;
+				
+				const inputYearDivBox = inputYearDiv.getBoundingClientRect();
+					
+				cumButtonPosition -= inputYearDivBox.width + buttonPadLeft;
+				
+				inputYearDiv.style.left = `${cumButtonPosition}px`;
+				inputYearDiv.style.top = `${margin.top - inputYearDivBox.height - buttonPadBottom}px`;
+				
+				inputYear.addEventListener("change", (e) => {
+					if (Number(e.target.value) === -1) {
+						selectCountry(prevSelectedCountry);
+						return;
+					}
+					selectYear(unformatYear(Number(e.target.value)));
+				});
+				
+				// Country input
+				const inputCountry = document.getElementsByClassName("inputCountry")[0];
+				const inputCountryDiv = document.getElementsByClassName("inputCountryDiv")[0];
+				
+				let countryList = '<option value="-1">All</option>\n';
+				
+				const countryTrunc = 37;
+				
+				let previousCountry = "";
+				data.forEach((d) => {
+					if (d.country !== previousCountry) {
+						countryList += `<option value="${d.country}">${countries[d.country].name.slice(0, countryTrunc)}</option>\n`;
+						previousCountry = d.country;
+					}
+				});
+				
+				inputCountry.innerHTML = countryList;
+				
+				const inputCountryDivBox = inputCountryDiv.getBoundingClientRect();
+					
+				cumButtonPosition -= inputCountryDivBox.width + buttonPadLeft;
+				
+				inputCountryDiv.style.left = `${cumButtonPosition}px`;
+				inputCountryDiv.style.top = `${margin.top - inputCountryDivBox.height - buttonPadBottom}px`;
+				
+				inputCountry.addEventListener("change", (e) => {
+					if (Number(e.target.value) === -1) {
+						selectYear(prevSelectedYear);
+						return;
+					}
+					selectCountry(Number(e.target.value));
+				});
+				
+				// Number of groups
+				const inputNoCats = document.getElementsByClassName("inputNoCats")[0];
+				const inputNoCatsDiv = document.getElementsByClassName("inputNoCatsDiv")[0];
+				
+				let noCatsList = "";
+			
+				for (let i = 1; i < maxCats + 1; ++i) {
+					noCatsList += `<option value${i === noCategs ? " selected" : ""}="${i}">${i}</option>\n`;
+				}
+				
+				inputNoCats.innerHTML = noCatsList;
+				
+				const inputNoCatsDivBox = inputNoCatsDiv.getBoundingClientRect();
+					
+				cumButtonPosition -= inputNoCatsDivBox.width + buttonPadLeft;
+				
+				inputNoCatsDiv.style.left = `${margin.left}px`;
+				inputNoCatsDiv.style.top = `${margin.top - inputNoCatsDivBox.height - buttonPadBottom}px`;
+				
+				inputNoCatsDiv.style.width = `${inputNoCatsDivBox.width + cumButtonPosition - margin.left - cssButtPad}px`;
+
+				
+				inputNoCats.addEventListener("change", (e) => {
+					selectNoCats(Number(e.target.value));
+				});
 
 				// Tooltips
 				const toolTip = document.getElementsByClassName("tool-tip")[0];
@@ -424,10 +543,10 @@ d3.tsv(`../data/income_gini.tsv`, (error, gini) => {
 				svg.append("text")
 					.attr("class", "chart-title")           
 					.attr("x", String(width / 2))           
-					.attr("y", "-40")
+					.attr("y", "-60")
 					.attr("text-anchor", "middle")  
-					.style("font-size", "16px") 
-					.text("Proportion of population holding equal amounts of income");
+					.style("font-size", "28px") 
+					.text("Groups of population holding equal amounts of income");
 					
 				svg.append("text")
 					.attr("transform", "rotate(-90)")
