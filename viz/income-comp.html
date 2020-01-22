@@ -130,36 +130,66 @@ function updateHiIncome(hi_percentile) {
     });
 }
 
-// Function used when "Select" button is clicked
+// Function used when the country is updated
 function updateGraph() {
 
-	// get the text inputed
+	// Get the country code from the dropdown
 	var country = document.getElementById('countrySelector').value.toUpperCase();
-	// get high and low values
+	// Get high and low values from the sliders
 	var hi_percentile = 1.0 - hiSlider.value();
 	var lo_percentile = loSlider.value();
-	// clear elemnts from th former svg (do not remove the svg itself)
+	// Clear elemnts from th former svg (do not remove the svg itself)
 	svg.selectAll("*").remove();
 
     // ============ Create graph ============
     d3.tsv(`../data/income/${country}.tsv`, function(error, data) {
     	if(error) throw error;
 
+        // Set the country label
+        svg.append('text')
+            .text(`Country: ${countries.get(country)}`)
+                .attr('transform', `translate(${width / 2}, -20)`)
+                .attr('text-anchor', 'middle')
+
+        // Add the x-axis
+        x.domain(d3.extent(data, d => +d.year));
+    	var xAxis = d3.axisBottom(x)
+    		.tickFormat(d3.format("d"));
+    	svg.append('g')
+    		.attr('transform', `translate(0, ${height})`)
+    		.call(xAxis);
+        // x-axis label
+    	svg.append('text')
+    		.text("Year")
+    		.attr('text-anchor', 'middle')
+    		.attr('x', width / 2)
+    		.attr('y', height + 40);
+
+        // Add the y-axis
+    	var yAxis = d3.axisRight(y);
+    	svg.append('g')
+    		.attr('transform', `translate(${width}, 0)`)
+    		.call(yAxis);
+        // y-axis right label
     	svg.append('text')
     		.text("Share of income")
     		.attr('transform', `translate(${width + 45}, ${height / 2}) rotate(-90)`)
     		.attr('text-anchor', 'middle');
-
-
+        // y-axis left label
     	svg.append('text')
     		.text("Share of population")
     		.attr('transform', `translate(-35, ${height / 2}) rotate(-90)`)
     		.attr('text-anchor', 'middle');
 
-        svg.append('text')
-            .text(`Country: ${countries.get(country)}`)
-                .attr('transform', `translate(${width / 2}, -20)`)
-                .attr('text-anchor', 'middle')
+        // Add horizontal lines every 25% of population share
+        [0.0, 0.25, 0.5, 0.75].forEach(d =>
+            svg.append("line")
+        		.attr("x1", 0)
+        		.attr("x2", width)
+        		.attr("y1", height * d)
+        		.attr("y2", height * d)
+        		.attr("stroke", "lightgrey")
+        		.attr("stroke-width", 1));
 
         // Income of lowest percentile
         lo_data = data
@@ -172,56 +202,31 @@ function updateGraph() {
             .sort((a, b) => +a.year - +b.year)
             .map(function (d) { return { year: +d.year, cumul: highCumul(hi_percentile, d)}; });
 
-        x.domain(d3.extent(data, d => +d.year));
-
-    	var lo_income = svg.append("path")
+        // Add line for bottom %
+    	svg.append("path")
             .attr('id', 'loIncomePath')
             .datum(lo_data)
     		.attr("d", ts)
     		.attr("stroke", LO_COLOR)
     		.attr("stroke-width", 2)
     		.attr("fill", "none");
-
-    	var hi_income = svg.append("path").datum(hi_data)
-            .attr('id', 'hiIncomePath')
-    		.attr("d", ts)
-    		.attr("stroke", HI_COLOR)
-    		.attr("stroke-width", 2)
-    		.attr("fill", "none");
-
-        [0.0, 0.25, 0.5, 0.75].forEach(d =>
-            svg.append("line")
-        		.attr("x1", 0)
-        		.attr("x2", width)
-        		.attr("y1", height * d)
-        		.attr("y2", height * d)
-        		.attr("stroke", "lightgrey")
-        		.attr("stroke-width", 1));
-
-    	var xAxis = d3.axisBottom(x)
-    		.tickFormat(d3.format("d"));
-
-    	svg.append('g')
-    		.attr('transform', 'translate(0,' + (y(0)+5) +')')
-    		.call(xAxis);
-
-    	svg.append('text')
-    		.text("Year")
-    		.attr('text-anchor', 'middle')
-    		.attr('x', width / 2)
-    		.attr('y', height + 40);
-
-    	var yAxis = d3.axisRight(y);
-    	svg.append('g')
-    		.attr('transform', 'translate(' + (x(d3.max(data, d => +d.year))+5) +')')
-    		.call(yAxis);
-
+        // Add label for bottom %
         svg.append('text')
             .attr('id', 'loIncomeLabel')
     		.text(`Bottom ${lf(+lo_percentile)}`)
                 .attr('transform', `translate(-10, ${height * 3 / 4}) rotate(-90)`)
                 .attr('text-anchor', 'middle')
                 .attr('fill', LO_COLOR);
+
+        // Add line for top %
+    	svg.append("path")
+            .attr('id', 'hiIncomePath')
+            .datum(hi_data)
+    		.attr("d", ts)
+    		.attr("stroke", HI_COLOR)
+    		.attr("stroke-width", 2)
+    		.attr("fill", "none");
+        // Add label for top %
         svg.append('text')
             .attr('id', 'hiIncomeLabel')
             .text(`Top ${lf(1.0 - hi_percentile)}`)
@@ -281,36 +286,40 @@ var gloSlider = d3
 gloSlider.call(loSlider);
 d3.select('p#low_value').text(d3.format('.0%')(loSlider.value()));
 
-// ============ Create svg ============
+// ============ Constant and variable definitions ============
 var COUNTRIES_WITH_INCOME = new Set([
         'AE', "BH", 'BR', 'CI', 'CN', 'CN-RU', 'CN-UR', 'CZ', 'DE', 'EG', 'FR',
         'IN', 'IR', 'JO', 'KR', 'KW', 'LB', 'MY', 'PL', 'PS', 'QA', 'RU', 'SI',
         'TH', 'TR', 'US', 'XF-MER', 'XL', 'XL-MER', 'XM', 'XN', 'XN-MER', 'XR',
         'XR-MER', 'YE'
     ]);
-var START_INDEX = 10;
+var START_INDEX = 10; // Set initial country to France
 var LO_COLOR = 'blue';
 var HI_COLOR = 'darkorange';
 
+// Read country names and initialize dropdown menu for countries
 var countries = initCountries(() => initDropdown(updateGraph));
 
 var margin = {top: 50, right: 100, bottom: 100, left: 100},
     width = 800 - margin.left - margin.right,
     height = 600 - margin.top - margin.bottom;
 
+// Axis scales
 var x = d3.scaleLinear()
     .range([0, width]);
-
 var y = d3.scaleLinear()
     .range([height, 0])
     .domain([0, 1]);
 
+// Functions to map data to screen coordinates
 var ts = d3.line()
     .x(function(d) { return x(d.year); })
     .y(function(d) { return y(d.cumul); });
 
+// Function to print numbers as percentage
 var lf = d3.format('.2p');
 
+// Main zone to display the graph
 var svg = d3.select('body')
     .append('svg')
         .attr('width', width + margin.left + margin.right)
