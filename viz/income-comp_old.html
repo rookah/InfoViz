@@ -87,48 +87,6 @@ function initDropdown(onUpdate) {
 
 }
 
-function updateLoIncome(lo_percentile) {
-    var country = document.getElementById('countrySelector').value.toUpperCase();
-    d3.tsv(`../data/income/${country}.tsv`, function(error, data) {
-    	if(error) throw error;
-
-        // Income of lowest percentile
-        lo_data = data
-            .filter(d => d.low <= lo_percentile && lo_percentile < d.high)
-            .sort((a, b) => +a.year - +b.year)
-            .map(function (d) { return { year: d.year, cumul: lowCumul(lo_percentile, d)}; });
-    	var lo_income = d3.select('#loIncomePath')
-            .datum(lo_data)
-    		.attr("d", ts)
-    		.attr("stroke", LO_COLOR)
-    		.attr("stroke-width", 2)
-    		.attr("fill", "none");
-        d3.select("#loIncomeLabel")
-            .text(`Bottom ${lf(+lo_percentile)}`)
-    });
-}
-
-function updateHiIncome(hi_percentile) {
-    var threshold = 1.0 - hi_percentile;
-    var country = document.getElementById('countrySelector').value.toUpperCase();
-    d3.tsv(`../data/income/${country}.tsv`, function(error, data) {
-    	if(error) throw error;
-
-        // Income of lowest percentile
-        lo_data = data
-            .filter(d => d.low <= threshold && threshold < d.high)
-            .sort((a, b) => +a.year - +b.year)
-            .map(function (d) { return { year: d.year, cumul: highCumul(threshold, d)}; });
-    	var hi_income = d3.select('#hiIncomePath')
-            .datum(lo_data)
-    		.attr("d", ts)
-    		.attr("stroke", HI_COLOR)
-    		.attr("stroke-width", 2)
-    		.attr("fill", "none");
-        d3.select("#hiIncomeLabel")
-            .text(`Top ${lf(+hi_percentile)}`)
-    });
-}
 
 // Function used when "Select" button is clicked
 function updateGraph() {
@@ -145,22 +103,6 @@ function updateGraph() {
     d3.tsv(`../data/income/${country}.tsv`, function(error, data) {
     	if(error) throw error;
 
-    	svg.append('text')
-    		.text("Share of income")
-    		.attr('transform', `translate(${width + 45}, ${height / 2}) rotate(-90)`)
-    		.attr('text-anchor', 'middle');
-
-
-    	svg.append('text')
-    		.text("Share of population")
-    		.attr('transform', `translate(-35, ${height / 2}) rotate(-90)`)
-    		.attr('text-anchor', 'middle');
-
-        svg.append('text')
-            .text(`Country: ${countries.get(country)}`)
-                .attr('transform', `translate(${width / 2}, -20)`)
-                .attr('text-anchor', 'middle')
-
         // Income of lowest percentile
         lo_data = data
             .filter(d => d.low <= lo_percentile && lo_percentile < d.high)
@@ -174,16 +116,17 @@ function updateGraph() {
 
         x.domain(d3.extent(data, d => +d.year));
 
-    	var lo_income = svg.append("path")
-            .attr('id', 'loIncomePath')
-            .datum(lo_data)
+    	var ts = d3.line()
+    		.x(function(d) { return x(d.year); })
+    		.y(function(d) { return y(d.cumul); });
+
+    	var lo_income = svg.append("path").datum(lo_data)
     		.attr("d", ts)
     		.attr("stroke", LO_COLOR)
     		.attr("stroke-width", 2)
     		.attr("fill", "none");
 
     	var hi_income = svg.append("path").datum(hi_data)
-            .attr('id', 'hiIncomePath')
     		.attr("d", ts)
     		.attr("stroke", HI_COLOR)
     		.attr("stroke-width", 2)
@@ -216,14 +159,29 @@ function updateGraph() {
     		.attr('transform', 'translate(' + (x(d3.max(data, d => +d.year))+5) +')')
     		.call(yAxis);
 
+    	svg.append('text')
+    		.text("Share of income")
+    		.attr('transform', `translate(${width + 45}, ${height / 2}) rotate(-90)`)
+    		.attr('text-anchor', 'middle');
+
+
+    	svg.append('text')
+    		.text("Share of population")
+    		.attr('transform', `translate(-35, ${height / 2}) rotate(-90)`)
+    		.attr('text-anchor', 'middle');
+
         svg.append('text')
-            .attr('id', 'loIncomeLabel')
+            .text(`Country: ${countries.get(country)}`)
+                .attr('transform', `translate(${width / 2}, -20)`)
+                .attr('text-anchor', 'middle')
+
+    	lf = d3.format('.2p')
+        svg.append('text')
     		.text(`Bottom ${lf(+lo_percentile)}`)
                 .attr('transform', `translate(-10, ${height * 3 / 4}) rotate(-90)`)
                 .attr('text-anchor', 'middle')
                 .attr('fill', LO_COLOR);
         svg.append('text')
-            .attr('id', 'hiIncomeLabel')
             .text(`Top ${lf(1.0 - hi_percentile)}`)
                 .attr('transform', `translate(-10, ${height / 4}) rotate(-90)`)
                 .attr('text-anchor', 'middle')
@@ -245,7 +203,7 @@ var hiSlider = d3
 	.default(0.10)
 	.on('onchange', val => {
 		   d3.select('p#high_value').text(d3.format('.0%')(val));
-           updateHiIncome(val);
+           updateGraph();
 		 });
 var ghiSlider = d3
     .select('div#high_slider')
@@ -269,7 +227,7 @@ var loSlider = d3
 	.default(0.50)
 	.on('onchange', val => {
 		   d3.select('p#low_value').text(d3.format('.0%')(val));
-           updateLoIncome(val);
+           updateGraph();
 		 });
 var gloSlider = d3
     .select('div#low_slider')
@@ -304,12 +262,6 @@ var x = d3.scaleLinear()
 var y = d3.scaleLinear()
     .range([height, 0])
     .domain([0, 1]);
-
-var ts = d3.line()
-    .x(function(d) { return x(d.year); })
-    .y(function(d) { return y(d.cumul); });
-
-var lf = d3.format('.2p');
 
 var svg = d3.select('body')
     .append('svg')
