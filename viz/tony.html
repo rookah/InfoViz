@@ -33,7 +33,7 @@ body { margin: 30px 50px; font-family: sans-serif; }
 .chart {
     position: relative;
 	margin-top: 40px;
-	width: 800px;
+	width: 820px;
 	height: 500px;
 }
 
@@ -86,7 +86,6 @@ body { margin: 30px 50px; font-family: sans-serif; }
 <body>
 
 <div class="chart">
-	<div class="tool-tip"></div>
 	<div class="button buttonStack">Unstack</div>
 	<div class="input inputYearDiv">
 		<label>Year:
@@ -111,9 +110,9 @@ body { margin: 30px 50px; font-family: sans-serif; }
 <script>
 
 const margin = {top: 100, right: 45, bottom: 180, left: 45};
-const legendWidth = 45; // Includes left margin
+const legendWidth = 60; // Includes left margin
 
-const width = 800 - margin.left - legendWidth - margin.right;
+const width = 820 - margin.left - legendWidth - margin.right;
 const height = 500 - margin.top - margin.bottom;
 
 let legend = document.getElementsByClassName("legend")[0];
@@ -133,7 +132,7 @@ const svg = d3.select(".chart").append("svg")
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
-const groupRange = [2, 10];
+const groupRange = [2, 5];
 let noGroups = 3;
 
 // Converts a data point into a group based on "cumul"
@@ -148,7 +147,10 @@ function getGroup(cumul, noGroups2 = noGroups) {
 }
 
 // Generated from http://vrl.cs.brown.edu/color
-const palette = ["rgb(12,192,170)", "rgb(254,133,173)", "rgb(143,202,64)", "rgb(246,122,254)", "rgb(8,169,229)", "rgb(14,198,28)", "rgb(250,121,34)", "rgb(154,178,143)", "rgb(172,139,248)", "rgb(234,175,22)"];
+// 10 colours
+//const palette = ["rgb(12,192,170)", "rgb(254,133,173)", "rgb(143,202,64)", "rgb(246,122,254)", "rgb(8,169,229)", "rgb(14,198,28)", "rgb(250,121,34)", "rgb(154,178,143)", "rgb(172,139,248)", "rgb(234,175,22)"];
+// 5 colours
+const palette = ["rgb(12,192,170)", "rgb(254,133,173)", "rgb(8,169,229)", "rgb(234,175,22)", "rgb(172,139,248)"];
 
 // https://stackoverflow.com/questions/5560248/programmatically-lighten-or-darken-a-hex-color-or-rgb-and-blend-colors
 const pSBC=(p,c0,c1,l)=>{
@@ -177,6 +179,11 @@ const pSBC=(p,c0,c1,l)=>{
 }
 			
 const yearRange = [1928, 2016];
+
+// Rounds to two decimal places
+function roundToTwo(num) {    
+    return Number(Math.round(num + "e+2")  + "e-2");
+}
 
 // Formats the year for display purposes
 function formatYear(y) {
@@ -233,7 +240,7 @@ dataTemp.forEach(d => {
 	if (d.year !== oldYear) {
 		oldYear = d.year;
 		// Checks if there is enough data
-		if (newYearData.length > 0 && newYearData.length >= groupRange[1]) {
+		if (newYearData.length > 0 && newYearData.length >= 10) {
 			data = data.concat(newYearData);
 			enoughData = true;
 		}
@@ -366,7 +373,6 @@ function generateLegend() {
 	for (let j = 0; j < noGroups; ++j) {
 		legendBoxes[j] = document.createElement("div");
 		legendBoxes[j].className = "legend-box";
-		legendBoxes[j].style["padding-top"] = "4px";
 		legendBoxes[j].style.bottom = `${j * height / noGroups}px`;
 		legendBoxes[j].style.height = `${height / noGroups}px`;
 		legendBoxes[j].style.background = palette[j];
@@ -375,7 +381,7 @@ function generateLegend() {
 		legendBoxSpans[j].className = "legend-box-span";
 		
 		legendBoxSpanSpans[j] = document.createElement("span");
-		legendBoxSpanSpans[j].innerText = `${Math.round(100 / noGroups, 2)}`;
+		legendBoxSpanSpans[j].innerText = `${roundToTwo(100 / noGroups, 2)}`;
 		
 		legendBoxSpans[j].append(legendBoxSpanSpans[j]);
 		legendBoxes[j].append(legendBoxSpans[j]);
@@ -390,13 +396,13 @@ function cutLegend(proportion) {
 		if (finished) { // Makes bars disappear
 			legendBoxes[j].style.height = 0;
 			legendBoxes[j].innerText = "";
-			legendBoxes[j].style["padding-top"] = "";
 		} else if (proportion > 1 / noGroups) { // Makes bars stay the same
 			proportion -= 1 / noGroups;
 		} else { // Makes bars change
 			legendBoxes[j].style.height = `${proportion * height}px`;
-			legendBoxSpanSpans[j].innerText = (proportion * height < 10 && j === 0) ? "" : `${Math.round((proportion) * 100)}`;
-			legendTotal.innerText = `${Math.round((( j / noGroups) + proportion) * 100)}`;
+			legendBoxSpanSpans[j].innerText = (proportion * height < 10 && j === 0) ? "" : `${roundToTwo((proportion) * 100)}`;
+			legendTotal.innerText = `${roundToTwo((( j / noGroups) + proportion) * 100)}`;
+			legendBoxes[j].style["padding-top"] = "4px";
 			finished = true;
 		}
 	}
@@ -425,10 +431,9 @@ function updateYAxis(proportion) {
 		ticks = y.ticks();
 		ticks.push(-1); //Ensures css style for ticks holds
 	}
-	
 	let axisNodes = svg.append("g")
 		.attr("class", "y-axis axis")
-		.call(d3.axisLeft(y).tickFormat(y => Math.round(y * 100)).tickValues(ticks))
+		.call(d3.axisLeft(y).tickFormat(y => roundToTwo(y * 100)).tickValues(ticks))
 		.selectAll("text")
 			.attr("font-family", "sans-serif")
 			.attr("font-size", "11px");
@@ -490,12 +495,6 @@ function drawChart() {
 				
 				let blockBox = d3.event.target.getBoundingClientRect();
 				chartHover(d, timeChart);
-				/*toolTip.style.display = "block";
-				toolTip.innerText = `${Math.round(d.high * 100)}% of population has\n${Math.round(d.cumul * 100)}% of income`;
-				toolTip.style.left = `${String(margin.left + x(timeChart ? d.year : d.country) + 0.5 * x.bandwidth())}px`;
-				//toolTip.style.bottom = `${String((toggleStack ? y(1 - heightBelow[noGroups - groupRange[0]][1][d.country][d.year]) : height) + margin.bottom + 8)}px`;
-				toolTip.style.bottom = `${String(height - yBar(d) + margin.bottom + 8)}px`;
-				*/
 				cutLegend(d.cumul);
 				updateYAxis(d.high);
 			})
@@ -509,7 +508,6 @@ function drawChart() {
 					.attr("fill", d1 => palette[getGroup(d1.cumul)]);
 				document.body.style.cursor = "auto";
 				svg.selectAll(".levelLine").attr("stroke", "");
-				toolTip.style.display = "none";
 				generateLegend();
 				updateYAxis();
 			})
@@ -656,9 +654,6 @@ inputNoGroups.addEventListener("change", (e) => {
 	selectNoGroups(Number(e.target.value));
 });
 
-// Tooltips
-const toolTip = document.getElementsByClassName("tool-tip")[0];
-
 // Title
 svg.append("text")
 	.attr("class", "chart-title")           
@@ -680,7 +675,7 @@ svg.append("text")
 // Legend title
 svg.append("text")
 	.attr("transform", "rotate(90)")
-	.attr("y", String(-margin.left - width - margin.right + 15))
+	.attr("y", String(-margin.left - width - margin.right))
 	.attr("x", String((height / 2)))
 	.attr("dy", "1em")
 	.style("text-anchor", "middle")
