@@ -5,8 +5,8 @@ Extracts of the [World Inequality Database](https://wid.world/).
 ## Content
 
 * **data/** the data in [tsv](https://bl.ocks.org/mbostock/3305937).
-	* **countries.tsv** country codes
-	* **income/** income share per country
+  * **countries.tsv** country codes
+  * **income/** income share per country
 * **viz/** sample visualisations
 * **vendor/** vendorized d3 library
 
@@ -38,10 +38,17 @@ The attributes present in the tables are:
 * **Bruno Lehouque**
 * **Tony Zheng**
 
-## Questions and associated visualizations
+## Usage
 
-* **Question:**
-    * **File:**
-    * **Graph type:**
-    * **Interaction:**
-    * **Design justification:**
+We developped three different visualizations. To run the visualizations:
+
+First, in the main directory, launch `python3 -m http.server`.  
+
+Then, in your favorite browser, type in the address bar:
+
+* For the evolution of the gini index:
+    * `http://localhost:8000/viz/gini-by-region.html`
+* For the repartition of the income between the population:
+    * `http://localhost:8000/viz/income-sharing.html`
+* For the evolution of income in a country:
+    * `http://localhost:8000/viz/income-evolution.html`
