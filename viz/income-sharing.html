@@ -177,18 +177,18 @@ const pSBC=(p,c0,c1,l)=>{
     if(h)return"rgb"+(f?"a(":"(")+r+","+g+","+b+(f?","+m(a*1000)/1000:"")+")";
     else return"#"+(4294967296+r*16777216+g*65536+b*256+(f?m(a*255):0)).toString(16).slice(1,f?undefined:-2)
 }
-			
+
 const yearRange = [1928, 2016];
 
 // Rounds to two decimal places
-function roundToTwo(num) {    
+function roundToTwo(num) {
     return Number(Math.round(num + "e+2")  + "e-2");
 }
 
 // Formats the year for display purposes
 function formatYear(y) {
 	return y + yearRange[0];
-}		
+}
 
 // Encodes the year
 function unformatYear(y) {
@@ -201,7 +201,7 @@ let countryList = [];
 // Loads list of countries
 d3.tsv("../data/countries.tsv", (error, countries) => {
 	if(error) throw error;
-			
+
 d3.tsv(`../data/income_gini.tsv`, (error, gini) => {
 if(error) return;
 
@@ -285,7 +285,7 @@ const chartHover = (function() {
 
 	// Granularity
 	const granul = 1000;
-	
+
 	let arr = new Array(countryList.length);
 	let it = new Array(countryList.length);
 	let years = yearRange[1] - yearRange[0] + 1;
@@ -297,14 +297,14 @@ const chartHover = (function() {
 			arr[k][l] = new Array(granul);
 		}
 	});
-	
+
 	data.forEach(d => {
 		while (Math.max(d.cumul, 0) >= (it[d.country][d.year] / granul) ** 2) {
 			arr[d.country][d.year][it[d.country][d.year]] = d.high;
 			++it[d.country][d.year];
 		}
 	});
-	
+
 	return (d1, timeChart) => {
 		let group = getGroup(d1.cumul);
 		function getLevel(d) {
@@ -321,10 +321,10 @@ let x, xAxis, yAxis;
 function yBar(d) {
 	return String(toggleStack ? y(d.high - heightBelow[noGroups - groupRange[0]][getGroup(d.cumul)][d.country][d.year]) : (1 - d.high) * height);
 }
-	
+
 const y = d3.scaleLinear()
 	.range([height, 0]);
-	
+
 // When selecting a country
 function selectCountry(country) {
 	selectedCountry = country;
@@ -333,7 +333,7 @@ function selectCountry(country) {
 	}
 	selectedYear = -1;
 	drawChart();
-	
+
 	// In case change was not due to direct selection manipulation
 	inputYear.options[0].selected = true;
 	for (let opt, j = 0; opt = inputCountry.options[j]; ++j) {
@@ -352,7 +352,7 @@ function selectYear(year) {
 	}
 	selectedCountry = -1;
 	drawChart();
-	
+
 	// In case change was not due to direct selection manipulation
 	inputCountry.options[0].selected = true;
 	for (let opt, j = 0; opt = inputYear.options[j]; ++j) {
@@ -376,13 +376,13 @@ function generateLegend() {
 		legendBoxes[j].style.bottom = `${j * height / noGroups}px`;
 		legendBoxes[j].style.height = `${height / noGroups}px`;
 		legendBoxes[j].style.background = palette[j];
-		
+
 		legendBoxSpans[j] = document.createElement("span");
 		legendBoxSpans[j].className = "legend-box-span";
-		
+
 		legendBoxSpanSpans[j] = document.createElement("span");
 		legendBoxSpanSpans[j].innerText = `${roundToTwo(100 / noGroups, 2)}`;
-		
+
 		legendBoxSpans[j].append(legendBoxSpanSpans[j]);
 		legendBoxes[j].append(legendBoxSpans[j]);
 		legend.append(legendBoxes[j]);
@@ -417,7 +417,7 @@ function selectNoGroups(n) {
 
 function updateYAxis(proportion) {
 	svg.selectAll(".y-axis").remove();
-	
+
 	let ticks = [];
 	if (proportion) {
 		y.ticks().forEach(t => {
@@ -443,26 +443,26 @@ function updateYAxis(proportion) {
 function drawChart() {
 	svg.selectAll(".bar").remove();
 	svg.selectAll(".axis").remove();
-	
+
 	let timeChart = selectedYear === -1;
-	
+
 	const filteredData = data.filter(d => timeChart ? Number(d.country) === Number(selectedCountry) : Number(d.year) === Number(selectedYear));
-	
+
 	filteredData.sort((a, b) => (timeChart ? (a.year > b.year) : (a.gini < b.gini)) ? 1 : 0);
-	
+
 	x = d3.scaleBand().range([0, width]);
 	const extent = d3.extent(filteredData, d => timeChart ? d.year : d.country);
-	
+
 	if (timeChart) {
 		x.domain(d3.range(extent[0], extent[1] + 1));
 	} else {
 		x.padding(0.3)
 		.domain(filteredData.map(d => timeChart ? d.year : d.country));
 	}
-	
+
 	xAxis = d3.axisBottom(x)
 		.tickFormat(d => timeChart ? formatYear(d) : countryList[d].name);
-		
+
 	svg.append("g")
 		.attr("class", "axis")
 		.attr("transform", `translate(0, ${height})`)
@@ -474,7 +474,7 @@ function drawChart() {
 			.attr("dx", "-.8em")
 			.attr("dy", ".15em")
 			.attr("transform", d => "rotate(-65)");
-	
+
 	svg.selectAll(".bar")
 		.append("div")
 		.data(filteredData)
@@ -489,10 +489,10 @@ function drawChart() {
 			.attr("fill", d => palette[getGroup(d.cumul)])
 			.on("mouseover", d => {
 				document.body.style.cursor = "pointer";
-				
+
 				svg.selectAll(".bar")
 					.attr("fill", d1 => Number(d1.country) === Number(d.country) && Number(d1.year) === Number(d.year) ? pSBC(0.2, palette[getGroup(d1.cumul)]) : palette[getGroup(d1.cumul)]);
-				
+
 				let blockBox = d3.event.target.getBoundingClientRect();
 				chartHover(d, timeChart);
 				cutLegend(d.cumul);
@@ -519,7 +519,7 @@ function drawChart() {
 				}
 				selectCountry(d.country);
 			});
-	
+
 	updateYAxis();
 }
 
@@ -564,21 +564,21 @@ buttonStack.style.left = `${cumButtonPosition}px`;
 buttonStack.style.top = `${margin.top - buttonStackBox.height - buttonPadBottom}px`;
 
 let toggleStack = false;
-		
+
 d3.select(".buttonStack")
 	.on("click", (evt) => {
 		toggleStack = !toggleStack;
 		d3.select(".button").text(toggleStack ? "Stack" : "Unstack");
-			
+
 		svg.selectAll(".bar")
 			.transition()
 			.attr("y", yBar)
 	});
-	
+
 // Year input
 const inputYear = document.getElementsByClassName("inputYear")[0];
 const inputYearDiv = document.getElementsByClassName("inputYearDiv")[0];
-			
+
 let yearList = '<option value="-1">All</option>\n';
 for (let ye = yearRange[1]; ye > yearRange[0]; --ye) {
 	yearList += `<option${unformatYear(ye) === selectedYear ? " selected" : ""} value="${ye}">${ye}</option>\n`;
@@ -587,7 +587,7 @@ for (let ye = yearRange[1]; ye > yearRange[0]; --ye) {
 inputYear.innerHTML = yearList;
 
 const inputYearDivBox = inputYearDiv.getBoundingClientRect();
-	
+
 cumButtonPosition -= inputYearDivBox.width + buttonPadLeft;
 
 inputYearDiv.style.left = `${cumButtonPosition}px`;
@@ -614,7 +614,7 @@ countryList.forEach((c, index) => {
 inputCountry.innerHTML = countryListSelect;
 
 const inputCountryDivBox = inputCountryDiv.getBoundingClientRect();
-	
+
 cumButtonPosition -= inputCountryDivBox.width + buttonPadLeft;
 
 inputCountryDiv.style.left = `${cumButtonPosition}px`;
@@ -641,7 +641,7 @@ for (let j = groupRange[0]; j < groupRange[1] + 1; ++j) {
 inputNoGroups.innerHTML = noGroupsList;
 
 const inputNoGroupsDivBox = inputNoGroupsDiv.getBoundingClientRect();
-	
+
 cumButtonPosition -= inputNoGroupsDivBox.width + buttonPadLeft;
 
 inputNoGroupsDiv.style.left = `${margin.left}px`;
@@ -656,12 +656,12 @@ inputNoGroups.addEventListener("change", (e) => {
 
 // Title
 svg.append("text")
-	.attr("class", "chart-title")           
-	.attr("x", String(width / 2))           
+	.attr("class", "chart-title")
+	.attr("x", String(width / 2))
 	.attr("y", "-60")
-	.attr("text-anchor", "middle")  
-	.style("font-size", "28px") 
-	.text("Groups of population holding equal amounts of income");
+	.attr("text-anchor", "middle")
+	.style("font-size", "28px")
+	.text("Groups of Population Holding Equal Amounts of Income");
 
 // Axis title
 svg.append("text")
@@ -671,7 +671,7 @@ svg.append("text")
 	.attr("dy", "1em")
 	.style("text-anchor", "middle")
 	.text("Percent of population");
-	
+
 // Legend title
 svg.append("text")
 	.attr("transform", "rotate(90)")
@@ -680,7 +680,7 @@ svg.append("text")
 	.attr("dy", "1em")
 	.style("text-anchor", "middle")
 	.text("Percent of income");
-	
+
 drawChart();
 generateLegend();
 }
